@@ -4,7 +4,6 @@
 
 import { Entity } from './entity.js';
 import { COLLISION_LAYERS, COLORS } from '../constants.js';
-import { Projectile } from './projectile.js';
 
 export class Joe extends Entity {
     constructor(x, y, game) {
@@ -41,6 +40,13 @@ export class Joe extends Entity {
         // Animation
         this.animationTimer = 0;
         this.tearTimer = 0;
+        
+        // Projectiles array
+        this.projectiles = [];
+        
+        // Combat state
+        this.isFighting = false;
+        this.damageFlash = 0;
     }
 
     startFighting() {
@@ -70,8 +76,8 @@ export class Joe extends Entity {
             this.x += Math.sin(this.floatTimer * 3) * 2;
             
             // Keep in bounds
-            if (this.x < 400) this.x = 400;
-            if (this.x > 700) this.x = 700;
+            if (this.x < 150) this.x = 150;
+            if (this.x > 200) this.x = 200;
         } else {
             // Gentle floating in phase 1
             this.y = this.baseY + Math.sin(this.floatTimer) * 10;
@@ -94,40 +100,43 @@ export class Joe extends Entity {
 
     phase1Attack() {
         // Spite projectiles
-        const projectile = new Projectile(
-            this.x,
-            this.y + this.height / 2,
-            -150, // velocity x
-            (Math.random() - 0.5) * 100, // velocity y
-            'spite',
-            10 // damage
-        );
+        this.projectiles.push({
+            x: this.x,
+            y: this.y + this.height / 2,
+            vx: -2, // velocity x
+            vy: (Math.random() - 0.5) * 2, // velocity y
+            width: 8,
+            height: 8,
+            damage: 10,
+            color: '#00ff00'
+        });
         
-        this.game.entityManager.addEntity(projectile);
-        this.game.audioManager.playSound('boss_attack');
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('boss_attack');
+        }
     }
 
     phase2Attack() {
         // Chaos barrage - multiple projectiles
         for (let i = 0; i < 3; i++) {
             const angle = (Math.PI / 4) * (i - 1);
-            const speed = 200;
+            const speed = 3;
             
-            const projectile = new Projectile(
-                this.x,
-                this.y + this.height / 2,
-                -Math.cos(angle) * speed,
-                Math.sin(angle) * speed,
-                'chaos',
-                15
-            );
-            
-            projectile.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-            this.game.entityManager.addEntity(projectile);
+            this.projectiles.push({
+                x: this.x,
+                y: this.y + this.height / 2,
+                vx: -Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                width: 10,
+                height: 10,
+                damage: 15,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`
+            });
         }
         
-        this.game.audioManager.playSound('boss_attack_heavy');
-        this.game.getState('boss').triggerScreenShake(0.3);
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('boss_attack_heavy');
+        }
     }
 
     transform() {
@@ -135,32 +144,17 @@ export class Joe extends Entity {
         this.phase = 2;
         this.attackCooldown = 40; // Faster attacks
         
-        // Transformation effect
-        this.game.getState('boss').triggerFlash();
-        this.game.audioManager.playSound('boss_transform');
-        
-        // Particles
-        this.game.createParticleBurst(
-            this.x + this.width / 2,
-            this.y + this.height / 2,
-            30,
-            COLORS.RED
-        );
-        
-        // Show transformation dialogue
-        this.game.changeState('dialogue', {
-            dialogue: [
-                { speaker: "Joe", text: "AHHHHH! YOU'VE PUSHED ME TOO FAR!" },
-                { speaker: "Joe", text: "TIME FOR MY FINAL FORM!" },
-                { speaker: "Joe", text: "BEHOLD... ULTRA BITTER JOE!" },
-                { speaker: "Mark", text: "Oh for f***'s sake..." },
-                { speaker: "Jenny", text: "Just keep hitting him, babe!" },
-                { speaker: "Joe", text: "I'LL SHOW YOU ALL! MAXIMUM SPITE MODE!" }
-            ],
-            onComplete: () => {
-                this.game.changeState('boss');
-            }
-        });
+        // Create transformation effect
+        if (this.game) {
+            this.game.createParticleBurst(
+                this.x + this.width / 2,
+                this.y + this.height / 2,
+                30,
+                COLORS.RED
+            );
+            
+            this.game.audioManager.playSound('boss_transform');
+        }
     }
 
     takeDamage(amount) {
@@ -170,14 +164,16 @@ export class Joe extends Entity {
         this.damageFlash = 10;
         
         // Create damage particles
-        this.game.createParticleBurst(
-            this.x + this.width / 2,
-            this.y + this.height / 2,
-            5,
-            COLORS.RED
-        );
-        
-        this.game.audioManager.playSound('boss_hurt');
+        if (this.game) {
+            this.game.createParticleBurst(
+                this.x + this.width / 2,
+                this.y + this.height / 2,
+                5,
+                COLORS.RED
+            );
+            
+            this.game.audioManager.playSound('boss_hurt');
+        }
         
         if (this.health <= 0) {
             this.health = 0;
@@ -190,19 +186,19 @@ export class Joe extends Entity {
         this.isDead = true;
         
         // Clear all projectiles
-        this.game.entityManager.queryEntities(e => e.type === 'projectile').forEach(p => {
-            p.destroy();
-        });
+        this.projectiles = [];
         
         // Victory effect
-        this.game.createParticleBurst(
-            this.x + this.width / 2,
-            this.y + this.height / 2,
-            50,
-            COLORS.GOLD
-        );
-        
-        this.game.audioManager.playSound('boss_defeat');
+        if (this.game) {
+            this.game.createParticleBurst(
+                this.x + this.width / 2,
+                this.y + this.height / 2,
+                50,
+                COLORS.GOLD
+            );
+            
+            this.game.audioManager.playSound('boss_defeat');
+        }
     }
 
     updateAnimation(deltaTime) {
@@ -212,6 +208,15 @@ export class Joe extends Entity {
         if (this.damageFlash > 0) {
             this.damageFlash--;
         }
+        
+        // Update projectiles
+        this.projectiles = this.projectiles.filter(proj => {
+            proj.x += proj.vx;
+            proj.y += proj.vy;
+            
+            // Remove projectiles that go off screen
+            return proj.x > -50 && proj.x < 300 && proj.y > -50 && proj.y < 300;
+        });
     }
 
     render(ctx, interpolation) {
@@ -229,7 +234,7 @@ export class Joe extends Entity {
             // Phase 1 - Sad musician Joe
             
             // Body (blue shirt)
-            ctx.fillStyle = COLORS.BLUE;
+            ctx.fillStyle = '#4169e1';
             ctx.fillRect(renderX + 16, renderY + 30, 32, 40);
             
             // Head
@@ -237,7 +242,7 @@ export class Joe extends Entity {
             ctx.fillRect(renderX + 20, renderY + 10, 24, 24);
             
             // Sad face
-            ctx.fillStyle = COLORS.BLACK;
+            ctx.fillStyle = '#000000';
             // Eyes
             ctx.fillRect(renderX + 26, renderY + 18, 3, 2);
             ctx.fillRect(renderX + 36, renderY + 18, 3, 2);
@@ -248,18 +253,18 @@ export class Joe extends Entity {
             
             // Tears
             if (Math.sin(this.tearTimer * 0.005) > 0) {
-                ctx.fillStyle = COLORS.LIGHT_BLUE;
+                ctx.fillStyle = '#00ffff';
                 ctx.fillRect(renderX + 28, renderY + 22, 2, 8);
                 ctx.fillRect(renderX + 38, renderY + 22, 2, 8);
             }
             
             // "REJECTED" band shirt text
-            ctx.fillStyle = COLORS.WHITE;
+            ctx.fillStyle = '#ffffff';
             ctx.font = '6px monospace';
             ctx.fillText('REJECTED', renderX + 18, renderY + 50);
             
             // Legs
-            ctx.fillStyle = COLORS.DARK_GRAY;
+            ctx.fillStyle = '#333333';
             ctx.fillRect(renderX + 22, renderY + 70, 8, 26);
             ctx.fillRect(renderX + 34, renderY + 70, 8, 26);
             
@@ -272,19 +277,19 @@ export class Joe extends Entity {
             ctx.fillRect(renderX + 8, renderY + 20, 48, 60);
             
             // Evil head
-            ctx.fillStyle = COLORS.BLACK;
+            ctx.fillStyle = '#000000';
             ctx.fillRect(renderX + 16, renderY, 32, 30);
             
             // Glowing eyes
             ctx.shadowBlur = 10;
-            ctx.shadowColor = COLORS.RED;
-            ctx.fillStyle = COLORS.RED;
+            ctx.shadowColor = '#ff0000';
+            ctx.fillStyle = '#ff0000';
             ctx.fillRect(renderX + 24, renderY + 12, 6, 4);
             ctx.fillRect(renderX + 36, renderY + 12, 6, 4);
             ctx.shadowBlur = 0;
             
             // Chaos crown
-            ctx.fillStyle = COLORS.GOLD;
+            ctx.fillStyle = '#ffd700';
             for (let i = 0; i < 3; i++) {
                 const spikeX = renderX + 20 + i * 12;
                 const spikeY = renderY - 10 + Math.sin(time + i) * 3;
@@ -292,7 +297,7 @@ export class Joe extends Entity {
             }
             
             // Evil grin
-            ctx.strokeStyle = COLORS.WHITE;
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(renderX + 32, renderY + 20, 10, 0, Math.PI);
@@ -303,7 +308,7 @@ export class Joe extends Entity {
         
         // Debug bounds
         if (window.DEBUG_ENTITIES) {
-            ctx.strokeStyle = COLORS.RED;
+            ctx.strokeStyle = '#ff0000';
             ctx.strokeRect(renderX, renderY, this.width, this.height);
         }
     }

@@ -1,5 +1,5 @@
 /**
- * Jenny - The Hippie Photographer Companion
+ * Jenny - The Hippie Photographer Companion (Simplified)
  */
 
 import { Entity } from './entity.js';
@@ -35,9 +35,6 @@ export class Jenny extends Entity {
         // Animation
         this.animationTimer = 0;
         this.currentFrame = 0;
-        
-        // Reference to game
-        this.game = mark.game;
     }
 
     onUpdate(deltaTime) {
@@ -81,20 +78,20 @@ export class Jenny extends Entity {
             this.vx *= 0.8;
             this.vy *= 0.8;
         }
+        
+        // Keep Jenny in bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > 256 - this.width) this.x = 256 - this.width;
+        if (this.y < 0) this.y = 0;
+        if (this.y > 224 - this.height) this.y = 224 - this.height;
     }
 
     takePhoto() {
         this.flashCooldown = 120;
         
-        // Create camera flash effect
-        if (this.game) {
-            this.game.createParticle(
-                this.x + this.width / 2,
-                this.y + this.height / 2,
-                0, 0, 200, 40, COLORS.WHITE
-            );
-            
-            this.game.audioManager.playSound('camera_flash');
+        // Create camera flash effect will be visible in render
+        if (this.mark && this.mark.game && this.mark.game.audioManager) {
+            this.mark.game.audioManager.playSound('camera_flash');
         }
     }
 
@@ -120,7 +117,7 @@ export class Jenny extends Entity {
         ctx.save();
         
         // Body (green hippie dress)
-        ctx.fillStyle = COLORS.GRASS_GREEN;
+        ctx.fillStyle = '#228b22';
         ctx.fillRect(renderX + 8, renderY + 20, 16, 20);
         
         // Head
@@ -132,11 +129,11 @@ export class Jenny extends Entity {
         ctx.fillRect(renderX + 6, renderY + 3, 20, 15);
         
         // Flower in hair
-        ctx.fillStyle = COLORS.GOLD;
+        ctx.fillStyle = '#ffd700';
         ctx.fillRect(renderX + 20, renderY + 5, 4, 4);
         
         // Eyes
-        ctx.fillStyle = COLORS.WHITE;
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(renderX + 12, renderY + 8, 3, 2);
         ctx.fillRect(renderX + 17, renderY + 8, 3, 2);
         ctx.fillStyle = '#654321';
@@ -144,22 +141,22 @@ export class Jenny extends Entity {
         ctx.fillRect(renderX + 18, renderY + 8, 1, 1);
         
         // Legs
-        ctx.fillStyle = COLORS.BLUE;
+        ctx.fillStyle = '#0000ff';
         ctx.fillRect(renderX + 10, renderY + 40, 5, 8);
         ctx.fillRect(renderX + 17, renderY + 40, 5, 8);
         
         // Camera
         if (this.hasCamera) {
-            ctx.fillStyle = COLORS.DARK_GRAY;
+            ctx.fillStyle = '#333333';
             if (this.facing === 'right') {
                 ctx.fillRect(renderX + 20, renderY + 18, 8, 6);
                 // Lens
-                ctx.fillStyle = COLORS.LIGHT_BLUE;
+                ctx.fillStyle = '#87ceeb';
                 ctx.fillRect(renderX + 26, renderY + 20, 2, 2);
             } else {
                 ctx.fillRect(renderX + 4, renderY + 18, 8, 6);
                 // Lens
-                ctx.fillStyle = COLORS.LIGHT_BLUE;
+                ctx.fillStyle = '#87ceeb';
                 ctx.fillRect(renderX + 4, renderY + 20, 2, 2);
             }
         }
@@ -174,7 +171,7 @@ export class Jenny extends Entity {
         
         // Debug bounds
         if (window.DEBUG_ENTITIES) {
-            ctx.strokeStyle = COLORS.LIGHT_GREEN;
+            ctx.strokeStyle = '#00ff00';
             ctx.strokeRect(renderX, renderY, this.width, this.height);
         }
     }

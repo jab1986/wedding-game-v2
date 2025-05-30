@@ -1,5 +1,5 @@
 /**
- * Mark - The Goth Drummer Protagonist
+ * Mark - The Goth Drummer Protagonist (Simplified)
  */
 
 import { Entity } from './entity.js';
@@ -17,14 +17,14 @@ export class Mark extends Entity {
         this.name = 'Mark';
         this.width = 32;
         this.height = 48;
-        this.speed = PLAYER.SPEED;
+        this.speed = 3;
         this.health = 100;
         this.maxHealth = 100;
         
         // Collision
         this.solid = true;
         this.collisionLayer = COLLISION_LAYERS.PLAYER;
-        this.collisionMask = COLLISION_LAYERS.WALL | COLLISION_LAYERS.ENEMY | COLLISION_LAYERS.ITEM;
+        this.collisionMask = COLLISION_LAYERS.WALL | COLLISION_LAYERS.ENEMY;
         
         // Combat
         this.attacking = false;
@@ -67,6 +67,12 @@ export class Mark extends Entity {
             this.vy *= 0.8;
         }
         
+        // Keep player in bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > 256 - this.width) this.x = 256 - this.width;
+        if (this.y < 0) this.y = 0;
+        if (this.y > 224 - this.height) this.y = 224 - this.height;
+        
         // Attack
         if (this.inputManager.isJustPressed('a') && this.attackCooldown <= 0) {
             this.attack();
@@ -78,38 +84,9 @@ export class Mark extends Entity {
         this.attackCooldown = 30;
         
         // Play attack sound
-        this.game.audioManager.playSound('drumstick_hit');
-        
-        // Check for hit enemies
-        const enemies = this.game.entityManager.getEntitiesInRadius(
-            this.x + this.width / 2,
-            this.y + this.height / 2,
-            this.attackRange,
-            entity => entity.type === 'enemy' || entity.type === 'boss'
-        );
-        
-        enemies.forEach(enemy => {
-            if (enemy.takeDamage) {
-                enemy.takeDamage(this.attackDamage);
-                
-                // Knockback
-                const dx = enemy.x - this.x;
-                const dy = enemy.y - this.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > 0) {
-                    enemy.vx += (dx / dist) * 200;
-                    enemy.vy += (dy / dist) * 100;
-                }
-                
-                // Create hit particles
-                this.game.createParticleBurst(
-                    enemy.x + enemy.width / 2,
-                    enemy.y + enemy.height / 2,
-                    10,
-                    COLORS.RED
-                );
-            }
-        });
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('drumstick_hit');
+        }
         
         setTimeout(() => {
             this.attacking = false;
@@ -136,13 +113,10 @@ export class Mark extends Entity {
         
         // Flash red
         this.damageFlash = 10;
-        
-        // Screen shake in boss fight
-        if (this.game.currentState === 'boss') {
-            this.game.getState('boss').triggerScreenShake(0.5);
+                
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('player_hurt');
         }
-        
-        this.game.audioManager.playSound('player_hurt');
         
         if (this.health <= 0) {
             this.health = 0;
@@ -151,7 +125,9 @@ export class Mark extends Entity {
     }
 
     onDeath() {
-        this.game.changeState('gameover');
+        if (this.game) {
+            this.game.gameOver();
+        }
     }
 
     render(ctx, interpolation) {
@@ -174,7 +150,7 @@ export class Mark extends Entity {
         }
         
         // Body (black clothing)
-        ctx.fillStyle = COLORS.BLACK;
+        ctx.fillStyle = '#000000';
         ctx.fillRect(renderX + 8, renderY + 20, 16, 20);
         
         // Head
@@ -182,19 +158,19 @@ export class Mark extends Entity {
         ctx.fillRect(renderX + 10, renderY + 5, 12, 12);
         
         // Mohawk
-        ctx.fillStyle = COLORS.BLACK;
+        ctx.fillStyle = '#000000';
         ctx.fillRect(renderX + 14, renderY, 4, 8);
         
         // Eyes
-        ctx.fillStyle = COLORS.WHITE;
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(renderX + 12, renderY + 8, 3, 2);
         ctx.fillRect(renderX + 17, renderY + 8, 3, 2);
-        ctx.fillStyle = COLORS.BLACK;
+        ctx.fillStyle = '#000000';
         ctx.fillRect(renderX + 13, renderY + 8, 1, 1);
         ctx.fillRect(renderX + 18, renderY + 8, 1, 1);
         
         // Legs
-        ctx.fillStyle = COLORS.BLACK;
+        ctx.fillStyle = '#000000';
         ctx.fillRect(renderX + 10, renderY + 40, 5, 8);
         ctx.fillRect(renderX + 17, renderY + 40, 5, 8);
         
@@ -214,18 +190,8 @@ export class Mark extends Entity {
         
         // Debug bounds
         if (window.DEBUG_ENTITIES) {
-            ctx.strokeStyle = COLORS.LIGHT_GREEN;
+            ctx.strokeStyle = '#00ff00';
             ctx.strokeRect(renderX, renderY, this.width, this.height);
         }
-    }
-
-    getStatus() {
-        return {
-            health: this.health,
-            hasRing: this.hasJoint,
-            isMarried: false,
-            happiness: 100,
-            energy: 100
-        };
     }
 }

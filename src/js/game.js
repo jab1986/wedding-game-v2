@@ -1,7 +1,8 @@
 // src/js/game.js
 import { GAME_STATES, CANVAS_WIDTH, CANVAS_HEIGHT } from './constants.js';
-import { SimplePlayer } from './entities/simplePlayer.js';
-import { SimpleJoe } from './entities/simpleJoe.js';
+import { Mark } from './entities/mark.js';
+import { Jenny } from './entities/jenny.js';
+import { Joe } from './entities/joe.js';
 import { InputManager } from './systems/input.js';
 import { AudioManager } from './systems/audio.js';
 import { LevelManager } from './systems/levelManager.js';
@@ -14,9 +15,9 @@ export class Game {
         this.ctx = this.canvas.getContext('2d');
         this.ctx.imageSmoothingEnabled = false;
 
-        // Set canvas size
-        this.canvas.width = CANVAS_WIDTH;
-        this.canvas.height = CANVAS_HEIGHT;
+        // Set canvas size to SNES resolution
+        this.canvas.width = 256;  // SNES width
+        this.canvas.height = 224; // SNES height
 
         // Game state
         this.state = GAME_STATES.START;
@@ -31,7 +32,7 @@ export class Game {
         this.frameCount = 0;
 
         // Systems
-        this.inputManager = new InputManager(this);
+        this.inputManager = new InputManager(this.canvas);
         this.audioManager = new AudioManager();
         this.levelManager = new LevelManager(this);
         this.renderer = new Renderer(this.ctx);
@@ -46,20 +47,18 @@ export class Game {
         this.dialogueBox = document.getElementById('dialogue');
         this.bossHealthBar = document.getElementById('bossHealth');
         this.bossName = document.getElementById('bossName');
+        this.startScreen = document.getElementById('startScreen');
 
         this.init();
     }
 
     init() {
         // Create player characters
-        this.mark = new SimplePlayer(100, 300, 'mark');
-        this.jenny = new SimplePlayer(140, 300, 'jenny');
-
-        // Set up Jenny to follow Mark
-        this.jenny.setFollowTarget(this.mark);
+        this.mark = new Mark(50, 150, this.inputManager, this);
+        this.jenny = new Jenny(90, 150, this.mark);
 
         // Create boss (hidden initially)
-        this.joe = new SimpleJoe(600, 200);
+        this.joe = new Joe(180, 50, this);
 
         // Bind game loop
         this.gameLoop = this.gameLoop.bind(this);
@@ -67,13 +66,16 @@ export class Game {
         // Set up UI event handlers
         this.setupUI();
 
+        // Show start screen
+        this.showStartScreen();
+
         // Start the game loop
         requestAnimationFrame(this.gameLoop);
     }
 
     setupUI() {
-        // Start button
-        const startBtn = document.querySelector('#startScreen button');
+        // Start button - use class selector instead of descendant selector
+        const startBtn = document.querySelector('.start-button');
         if (startBtn) {
             startBtn.addEventListener('click', () => this.startGame());
         }
@@ -92,13 +94,25 @@ export class Game {
         });
     }
 
+    showStartScreen() {
+        if (this.startScreen) {
+            this.startScreen.classList.remove('hidden');
+        }
+        // Clear canvas with a dark background
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
     startGame() {
-        document.getElementById('startScreen').classList.add('hidden');
+        if (this.startScreen) {
+            this.startScreen.classList.add('hidden');
+        }
         this.state = GAME_STATES.PLAYING;
+        this.audioManager.unlock();
         this.audioManager.startMusic();
 
         // Resume audio context if suspended
-        if (this.audioManager.context.state === 'suspended') {
+        if (this.audioManager.context && this.audioManager.context.state === 'suspended') {
             this.audioManager.context.resume();
         }
     }
@@ -133,8 +147,14 @@ export class Game {
     }
 
     update(dt) {
+        // Update input manager
+        this.inputManager.update();
+
         // Update based on game state
         switch (this.state) {
+            case GAME_STATES.START:
+                // Start screen doesn't need updates
+                break;
             case GAME_STATES.PLAYING:
                 this.updatePlaying(dt);
                 break;
@@ -152,21 +172,21 @@ export class Game {
 
     updatePlaying(dt) {
         // Update player movement
-        this.mark.update(dt, this.inputManager, this.levelManager);
-        this.jenny.update(dt, this.inputManager, this.levelManager);
+        this.mark.update(dt * 1000); // Convert to milliseconds
+        this.jenny.update(dt * 1000);
 
         // Check level objectives
         const currentLevel = this.levelManager.getCurrentLevel();
-        if (currentLevel.checkObjective(this.mark)) {
+        if (currentLevel.checkObjective && this.levelManager.checkObjective(this.mark)) {
             this.startDialogue();
         }
     }
 
     updateBossFight(dt) {
         // Update all entities
-        this.mark.update(dt, this.inputManager, this.levelManager);
-        this.jenny.update(dt, this.inputManager, this.levelManager);
-        this.joe.update(dt, this.mark, this.audioManager);
+        this.mark.update(dt * 1000);
+        this.jenny.update(dt * 1000);
+        this.joe.update(dt * 1000);
 
         // Check collisions
         this.checkBossCollisions();
@@ -228,26 +248,30 @@ export class Game {
     }
 
     render(interpolation) {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Always clear canvas
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Render based on game state
         if (this.state === GAME_STATES.START) {
-            return; // Start screen is HTML
+            // Start screen is HTML overlay, just show dark background
+            return;
         }
 
         // Render level
         this.levelManager.render(this.renderer, interpolation);
 
         // Render entities
-        this.renderer.drawCharacter(this.mark, interpolation);
-        this.renderer.drawCharacter(this.jenny, interpolation);
+        if (this.mark) this.mark.render(this.ctx, interpolation);
+        if (this.jenny) this.jenny.render(this.ctx, interpolation);
 
-        if (this.state === GAME_STATES.BOSS_FIGHT) {
-            this.renderer.drawBoss(this.joe, interpolation);
-            this.joe.projectiles.forEach(proj => {
-                this.renderer.drawProjectile(proj);
-            });
+        if (this.state === GAME_STATES.BOSS_FIGHT && this.joe) {
+            this.joe.render(this.ctx, interpolation);
+            if (this.joe.projectiles) {
+                this.joe.projectiles.forEach(proj => {
+                    this.renderer.drawProjectile(proj);
+                });
+            }
         }
 
         // Render particles
@@ -261,9 +285,11 @@ export class Game {
 
     renderBossUI() {
         // Health bar is HTML, just ensure it's visible
-        if (!this.bossHealthBar.style.display || this.bossHealthBar.style.display === 'none') {
-            this.bossHealthBar.style.display = 'block';
-            this.bossName.style.display = 'block';
+        if (this.bossHealthBar) {
+            this.bossHealthBar.classList.remove('hidden');
+        }
+        if (this.bossName) {
+            this.bossName.classList.remove('hidden');
         }
     }
 
@@ -288,7 +314,7 @@ export class Game {
         if (this.dialogueIndex < dialogue.length) {
             this.dialogueBox.innerHTML = dialogue[this.dialogueIndex] +
                 '<br><span style="color: #666; font-size: 8px;">[SPACE or TAP to continue]</span>';
-            this.dialogueBox.style.display = 'block';
+            this.dialogueBox.classList.remove('hidden');
         } else {
             this.endDialogue();
         }
@@ -300,7 +326,7 @@ export class Game {
     }
 
     endDialogue() {
-        this.dialogueBox.style.display = 'none';
+        this.dialogueBox.classList.add('hidden');
 
         const currentLevelIndex = this.levelManager.currentLevel;
 
@@ -319,16 +345,17 @@ export class Game {
 
     startBossFight() {
         this.state = GAME_STATES.BOSS_FIGHT;
-        this.bossHealthBar.style.display = 'block';
-        this.bossName.style.display = 'block';
+        if (this.bossHealthBar) this.bossHealthBar.classList.remove('hidden');
+        if (this.bossName) this.bossName.classList.remove('hidden');
+        this.joe.startFighting();
         this.audioManager.playSound('boss');
     }
 
     resetPlayerPositions() {
-        this.mark.x = 100;
-        this.mark.y = 300;
-        this.jenny.x = 140;
-        this.jenny.y = 300;
+        this.mark.x = 50;
+        this.mark.y = 150;
+        this.jenny.x = 90;
+        this.jenny.y = 150;
     }
 
     winBossFight() {
@@ -362,13 +389,20 @@ export class Game {
     gameOver() {
         this.state = GAME_STATES.GAME_OVER;
         this.audioManager.playSound('death');
-        document.getElementById('gameOverScreen').classList.remove('hidden');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        if (gameOverScreen) gameOverScreen.classList.remove('hidden');
     }
 
     endGame() {
         this.state = GAME_STATES.END;
-        document.getElementById('endScreen').classList.remove('hidden');
-        this.bossHealthBar.style.display = 'none';
-        this.bossName.style.display = 'none';
+        const endScreen = document.getElementById('endScreen');
+        if (endScreen) endScreen.classList.remove('hidden');
+        if (this.bossHealthBar) this.bossHealthBar.classList.add('hidden');
+        if (this.bossName) this.bossName.classList.add('hidden');
+    }
+
+    // Helper method for particle effects
+    createParticleBurst(x, y, count, color) {
+        this.particleSystem.createParticles(x, y, color, count);
     }
 }

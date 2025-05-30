@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+
+    <title>Mark & Jenny's F***ing Epic Wedding Quest - SNES Edition</title>
+    <meta name="description" content="A tale of two souls who somehow found each other in this godforsaken world">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/src/css/game.css" as="style">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/src/css/game.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="256" height="224"></canvas>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen">
+            <div class="screen-content">
+                <h1>MARK & JENNY'S<br />F***ING EPIC<br />WEDDING QUEST</h1>
+                <p class="subtitle">A tale of love, drums, and poor decisions</p>
+                <button class="start-button">START GAME</button>
+                <p class="warning">⚠ WARNING: Contains love, drums, and spite ⚠</p>
+            </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="hidden">
+            <div class="loading-content">
+                <h1>MARK & JENNY'S<br />WEDDING QUEST</h1>
+                <p class="loading-text">Loading SNES awesomeness...</p>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p class="warning">⚠ WARNING: Contains love, drums, and spite ⚠</p>
+            </div>
+        </div>
+
+        <!-- Dialogue Box -->
+        <div id="dialogue" class="dialogue-box hidden">
+            <p>Dialogue text will appear here...</p>
+        </div>
+
+        <!-- Boss Health Bar -->
+        <div id="bossHealth" class="boss-health hidden">
+            <div id="bossName" class="boss-name">JOE - THE CHAOS DRUMMER</div>
+            <div class="health-bar">
+                <div id="bossHealthFill" class="health-fill"></div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>GAME OVER</h1>
+                <p>Mark got drummed to death!</p>
+                <button onclick="location.reload()">TRY AGAIN</button>
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="endScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>CONGRATULATIONS!</h1>
+                <p>Mark & Jenny are married!<br />Joe learned the power of friendship!</p>
+                <button onclick="location.reload()">PLAY AGAIN</button>
+            </div>
+        </div>
+
+        <!-- Mute Button -->
+        <button id="muteBtn" class="mute-button">🔊</button>
+
+        <div id="touch-controls">
+            <div id="dpad" class="touch-control">
+                <div class="dpad-button" data-direction="up">↑</div>
+                <div class="dpad-button" data-direction="left">←</div>
+                <div class="dpad-button" data-direction="center"></div>
+                <div class="dpad-button" data-direction="right">→</div>
+                <div class="dpad-button" data-direction="down">↓</div>
+            </div>
+            <div id="action-buttons" class="touch-control">
+                <button class="action-button" data-action="a">A</button>
+                <button class="action-button" data-action="b">B</button>
+                <button class="action-button small" data-action="start">START</button>
+                <button class="action-button small" data-action="select">SELECT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Scripts -->
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+{
+    "name": "Wedding Game - SNES Style",
+    "short_name": "Wedding Game",
+    "description": "A retro SNES-style wedding game",
+    "start_url": "/",
+    "display": "fullscreen",
+    "orientation": "landscape",
+    "theme_color": "#000000",
+    "background_color": "#000000",
+    "categories": [
+        "games",
+        "entertainment"
+    ],
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot-wide.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide"
+        }
+    ]
+}
